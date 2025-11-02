@@ -5,20 +5,44 @@ extends Node2D
 @export var obstacle_scenes: Array[PackedScene] = []  # Array of different obstacle types
 
 @export var spawn_interval: float = 1.0         # base interval
-@export var obstacle_chance: float = 0.7        # 70% obstacle, 30% coin
 @export var start_x: float = 1200.0             # spawn X (offscreen right)
-@export var world_speed: float = 260.0          # keep in sync with parallax
+@export var world_speed: float = 1098.0          # doubled base speed 
 @export var lanes_y: PackedFloat32Array = []    # Will be set by player
 
 @export var min_gap_px: float = 140.0           # ensure spacing between spawns
+@export var speed_increase_interval: float = 15.0  # increase speed every 15 seconds
+@export var speed_increase_rate: float = 1.1    # multiply by 1.1 (10% increase)
+@export var coin_sequence_length: int = 4       # number of coins in sequence before switching lanes
+@export var coin_sequence_spacing: float = 0.2  # time between coins in sequence (faster)
+@export var obstacle_spawn_interval: float = 1.5  # time between obstacle spawns (faster)
+@export var obstacle_chance: float = 0.8        # 80% chance to spawn obstacle when interval is reached
+@export var min_spawn_distance: float = 200.0   # minimum distance between spawns to prevent overlap
+
 var _next_spawn_time: float = 0.0
+var _next_obstacle_spawn_time: float = 0.0
 var _rng := RandomNumberGenerator.new()
 var _game_active: bool = true
+var _speed_timer: float = 0.0
+var _current_speed_multiplier: float = 1.0
+var _current_lane: int = 0
+var _coins_in_sequence: int = 0
+var _recent_spawns: Array[Dictionary] = []  # Track recent spawns to prevent overlaps
 
 func _ready() -> void:
 	_rng.randomize()
 	_next_spawn_time = spawn_interval
+	_next_obstacle_spawn_time = obstacle_spawn_interval
+	
+	# Initialize coin sequence tracking
+	_current_lane = _rng.randi_range(0, 2)
+	_coins_in_sequence = 0
+	
 	print("Spawner ready! obstacle_scenes count: ", obstacle_scenes.size(), " coin_scene: ", coin_scene)
+	
+	# Initialize parallax scroller speed
+	var parallax = get_parent().get_node("ParallaxScroller")
+	if parallax and parallax.has_method("set"):
+		parallax.set("scroll_speed", world_speed)
 	
 	# Connect to player signals
 	var player = get_parent().get_node("Player")
@@ -41,49 +65,63 @@ func _on_lanes_updated(new_lanes: Array[float]) -> void:
 func _process(delta: float) -> void:
 	if not _game_active:
 		return
+	
+	# Update speed progression timer
+	_speed_timer += delta
+	if _speed_timer >= speed_increase_interval:
+		_speed_timer = 0.0
+		_current_speed_multiplier *= speed_increase_rate
+		print("Speed increased! New multiplier: ", _current_speed_multiplier, " Effective speed: ", world_speed * _current_speed_multiplier)
+		
+		# Update parallax scroller speed
+		var parallax = get_parent().get_node("ParallaxScroller")
+		if parallax and parallax.has_method("set"):
+			parallax.set("scroll_speed", world_speed * _current_speed_multiplier)
 		
 	_next_spawn_time -= delta
 	if _next_spawn_time <= 0.0:
-		_spawn_random()
-		# small difficulty wobble
-		_next_spawn_time = max(0.55, spawn_interval - _rng.randf_range(0.0, 0.25))
+		_spawn_coin()
+		# Use shorter interval for coin sequences
+		_next_spawn_time = coin_sequence_spacing
+	
+	# Handle obstacle spawning separately
+	_next_obstacle_spawn_time -= delta
+	if _next_obstacle_spawn_time <= 0.0:
+		if _rng.randf() <= obstacle_chance:
+			_spawn_obstacle()
+		_next_obstacle_spawn_time = obstacle_spawn_interval
 
-func _spawn_random() -> void:
+func _spawn_coin() -> void:
 	if lanes_y.size() != 3:
 		print("Warning: lanes_y size is ", lanes_y.size(), " but expected 3")
 		return
 
-	# Prevent impossible overlaps by simple X-gap check
-	# Note: This logic needs rework since start_x is fixed, but for now let's disable it
-	# if _last_spawn_x > 0.0 and (start_x - _last_spawn_x) < min_gap_px:
-	#	print("Skipping spawn due to gap check. Last spawn X: ", _last_spawn_x, " Current start X: ", start_x, " Gap: ", start_x - _last_spawn_x)
-	#	return
+	# Check if we need to switch lanes (after completing a sequence)
+	if _coins_in_sequence >= coin_sequence_length:
+		_coins_in_sequence = 0
+		# Switch to a different lane
+		var new_lane = _current_lane
+		while new_lane == _current_lane:
+			new_lane = _rng.randi_range(0, 2)
+		_current_lane = new_lane
+		print("Switched to lane ", _current_lane, " for new coin sequence")
 
-	var lane_idx: int = _rng.randi_range(0, 2)
-	var is_obstacle: bool = _rng.randf() <= obstacle_chance
+	var lane_idx: int = _current_lane
 	
-	# If coin_scene is null, always spawn obstacles
-	if coin_scene == null:
-		is_obstacle = true
+	# Check for overlaps before spawning
+	if _would_overlap(start_x, lane_idx):
+		print("Skipping coin spawn due to overlap at lane ", lane_idx)
+		return
 	
-	var scene: PackedScene = null
-	if is_obstacle:
-		# Randomly select from available obstacle scenes
-		if obstacle_scenes.size() > 0:
-			var obstacle_idx = _rng.randi_range(0, obstacle_scenes.size() - 1)
-			scene = obstacle_scenes[obstacle_idx]
-			print("Selected obstacle type ", obstacle_idx, " from ", obstacle_scenes.size(), " types")
-		else:
-			print("No obstacle scenes available!")
-			return
-	else:
-		scene = coin_scene
+	_coins_in_sequence += 1
+	
+	var scene: PackedScene = coin_scene
 	
 	if scene == null:
-		print("Scene is null! is_obstacle: ", is_obstacle)
+		print("Coin scene is null!")
 		return
 
-	print("Spawning ", "obstacle" if is_obstacle else "coin", " at lane ", lane_idx, " (y=", lanes_y[lane_idx], ")")
+	print("Spawning coin ", _coins_in_sequence, "/", coin_sequence_length, " at lane ", lane_idx, " (y=", lanes_y[lane_idx], ")")
 	
 	var inst := scene.instantiate()
 	if !(inst is Node2D):
@@ -93,18 +131,102 @@ func _spawn_random() -> void:
 	var n2d := inst as Node2D
 	n2d.position = Vector2(start_x, lanes_y[lane_idx])
 
-	# Pass world speed into spawned node if it has 'speed'
+	# Pass current effective world speed into spawned node if it has 'speed'
+	var effective_speed = world_speed * _current_speed_multiplier
 	if inst.has_method("set") and "speed" in inst:
-		inst.set("speed", world_speed)
+		inst.set("speed", effective_speed)
 
-	# Connect signals (optional)
-	if is_obstacle and inst.has_signal("hit_player"):
-		inst.connect("hit_player", Callable(self, "_on_hit_player"))
-	elif not is_obstacle and inst.has_signal("collected"):
+	# Connect signals for coins
+	if inst.has_signal("collected"):
 		inst.connect("collected", Callable(self, "_on_coin_collected"))
 
+	# Track this spawn
+	_track_spawn(start_x, lane_idx, "coin")
+
 	add_child(inst)
-	print("Successfully spawned and added bee to scene tree")
+	print("Successfully spawned and added coin to scene tree")
+
+func _spawn_obstacle() -> void:
+	if lanes_y.size() != 3:
+		print("Warning: lanes_y size is ", lanes_y.size(), " but expected 3")
+		return
+	
+	if obstacle_scenes.size() == 0:
+		print("No obstacle scenes available!")
+		return
+	
+	# Choose a random lane for obstacles (not following coin sequence)
+	var lane_idx: int = _rng.randi_range(0, 2)
+	
+	# Check for overlaps before spawning
+	if _would_overlap(start_x, lane_idx):
+		print("Skipping obstacle spawn due to overlap at lane ", lane_idx)
+		return
+	
+	# Randomly select from available obstacle scenes
+	var obstacle_idx = _rng.randi_range(0, obstacle_scenes.size() - 1)
+	var scene = obstacle_scenes[obstacle_idx]
+	print("Selected obstacle type ", obstacle_idx, " from ", obstacle_scenes.size(), " types")
+	
+	if scene == null:
+		print("Obstacle scene is null!")
+		return
+
+	print("Spawning obstacle at lane ", lane_idx, " (y=", lanes_y[lane_idx], ")")
+	
+	var inst := scene.instantiate()
+	if !(inst is Node2D):
+		print("Instantiated object is not Node2D!")
+		return
+
+	var n2d := inst as Node2D
+	n2d.position = Vector2(start_x, lanes_y[lane_idx])
+
+	# Pass current effective world speed into spawned node if it has 'speed'
+	var effective_speed = world_speed * _current_speed_multiplier
+	if inst.has_method("set") and "speed" in inst:
+		inst.set("speed", effective_speed)
+
+	# Connect signals for obstacles
+	if inst.has_signal("hit_player"):
+		inst.connect("hit_player", Callable(self, "_on_hit_player"))
+
+	# Track this spawn
+	_track_spawn(start_x, lane_idx, "obstacle")
+
+	add_child(inst)
+	print("Successfully spawned and added obstacle to scene tree")
+
+func _would_overlap(spawn_x: float, lane: int) -> bool:
+	# Clean up old spawns that have moved far enough away
+	_cleanup_old_spawns()
+	
+	# Check if any recent spawn in the same lane is too close
+	for spawn_data in _recent_spawns:
+		if spawn_data.lane == lane:
+			var distance = abs(spawn_x - spawn_data.x_position)
+			if distance < min_spawn_distance:
+				return true
+	return false
+
+func _track_spawn(spawn_x: float, lane: int, type: String) -> void:
+	var spawn_data = {
+		"x_position": spawn_x,
+		"lane": lane,
+		"type": type,
+		"spawn_time": Time.get_time_dict_from_system()
+	}
+	_recent_spawns.append(spawn_data)
+
+func _cleanup_old_spawns() -> void:
+	# Remove spawns that have moved far enough left that they won't cause overlaps
+	var effective_speed = world_speed * _current_speed_multiplier
+	var cleanup_distance = min_spawn_distance * 2.0  # Extra buffer
+	
+	_recent_spawns = _recent_spawns.filter(func(spawn_data):
+		var estimated_current_x = spawn_data.x_position - (effective_speed * 2.0)  # Estimate 2 seconds of movement
+		return estimated_current_x > (start_x - cleanup_distance)
+	)
 
 func _on_coin_collected() -> void:
 	print("Spawner received coin collected signal")
@@ -145,6 +267,21 @@ func _input(event: InputEvent) -> void:
 
 func _restart_game() -> void:
 	print("Restarting game...")
+	
+	# Reset speed progression
+	_speed_timer = 0.0
+	_current_speed_multiplier = 1.0
+	
+	# Reset coin sequence tracking
+	_current_lane = _rng.randi_range(0, 2)
+	_coins_in_sequence = 0
+	
+	# Reset spawn timers
+	_next_spawn_time = spawn_interval
+	_next_obstacle_spawn_time = obstacle_spawn_interval
+	
+	# Clear spawn tracking
+	_recent_spawns.clear()
 	
 	# Reset HUD before reloading scene
 	var hud = get_parent().get_node("HUD")

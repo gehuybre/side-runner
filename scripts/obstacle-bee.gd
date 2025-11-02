@@ -2,7 +2,7 @@
 extends Node2D
 
 @export var speed: float = 260.0
-@export var destroy_x: float = -500.0  # Much further left to ensure it passes the player
+@export var destroy_x: float = -800.0  # Much further left to ensure it passes the player
 
 signal hit_player
 

@@ -1,6 +1,6 @@
 extends ParallaxBackground
 
-@export var scroll_speed: float = 260.0
+@export var scroll_speed: float = 598.0  # doubled base speed (299 * 2)
 @export var layer_multipliers: PackedFloat32Array = [0.25, 0.5, 1.0]
 
 var _active: bool = true
