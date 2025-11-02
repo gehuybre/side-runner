@@ -8,6 +8,7 @@ extends Node2D
 @export var custom_lanes_y: PackedFloat32Array = []
 @export var jump_height: float = 90.0
 @export var jump_duration: float = 0.6
+@export var magnet_duration_default: float = 5.0
 
 @onready var character_body: CharacterBody2D = $CharacterBody2D
 @onready var animated_sprite = character_body.get_node("AnimatedSprite2D") if character_body else null
@@ -20,9 +21,12 @@ var is_dead: bool = false
 var is_jumping: bool = false
 var touch_controls: Control = null
 var _character_base_y: float = 0.0
+var _magnet_timer: Timer = null
+var _magnet_active: bool = false
 
 signal player_died
 signal lanes_updated(new_lanes: Array[float])
+signal magnet_state_changed(active: bool)
 
 func _ready() -> void:
 	position.x = fixed_x
@@ -34,6 +38,11 @@ func _ready() -> void:
 		_character_base_y = character_body.position.y
 	if animated_sprite:
 		animated_sprite.play("run")
+	
+	_magnet_timer = Timer.new()
+	_magnet_timer.one_shot = true
+	add_child(_magnet_timer)
+	_magnet_timer.timeout.connect(_on_magnet_timer_timeout)
 	
 	# Emit signal so spawner can sync lanes
 	lanes_updated.emit(lanes)
@@ -161,6 +170,7 @@ func die() -> void:
 		return
 		
 	is_dead = true
+	_deactivate_magnet()
 	print("Player died!")
 	
 	# Stop any lane changing tween
@@ -188,3 +198,38 @@ func die() -> void:
 	death_tween.set_parallel(true)
 	death_tween.tween_property(self, "rotation", PI/2, 0.5)
 	death_tween.tween_property(self, "modulate", Color.RED, 0.3)
+
+func activate_magnet(duration: float = -1.0) -> void:
+	if is_dead:
+		return
+	var effective_duration: float = duration
+	if effective_duration <= 0.0:
+		effective_duration = magnet_duration_default
+	if _magnet_timer == null:
+		return
+	_magnet_active = true
+	_magnet_timer.start(effective_duration)
+	magnet_state_changed.emit(true)
+	print("Magnet activated for ", effective_duration, " seconds")
+
+func is_magnet_active() -> bool:
+	return _magnet_active
+
+func get_magnet_anchor_position() -> Vector2:
+	if character_body:
+		return character_body.global_position
+	return global_position
+
+func _deactivate_magnet() -> void:
+	if _magnet_timer:
+		_magnet_timer.stop()
+	if _magnet_active:
+		_magnet_active = false
+		magnet_state_changed.emit(false)
+
+func _on_magnet_timer_timeout() -> void:
+	if not _magnet_active:
+		return
+	_magnet_active = false
+	magnet_state_changed.emit(false)
+	print("Magnet effect expired")

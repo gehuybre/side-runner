@@ -1,15 +1,17 @@
-[gd_scene load_steps=6 format=3 uid="uid://bxywatywq4fr4"]
+[gd_scene load_steps=7 format=3 uid="uid://bxywatywq4fr4"]
 
 [ext_resource type="Script" uid="uid://bv1gqimjjxfkl" path="res://scripts/spawner.gd" id="1_2vbf6"]
 [ext_resource type="PackedScene" uid="uid://lsjheo840ubq" path="res://scenes/coin.tscn" id="2_coin"]
 [ext_resource type="PackedScene" uid="uid://fa6d4d2ycwno" path="res://scenes/obstacle-bee.tscn" id="3_bee"]
 [ext_resource type="PackedScene" path="res://scenes/obstacle-boar.tscn" id="4_boar"]
 [ext_resource type="PackedScene" path="res://scenes/obstacle-snail.tscn" id="5_snail"]
+[ext_resource type="PackedScene" path="res://scenes/magnet-star.tscn" id="6_magnet"]
 
 [node name="Spawner" type="Node2D"]
 script = ExtResource("1_2vbf6")
 coin_scene = ExtResource("2_coin")
 obstacle_scenes = Array[PackedScene]([ExtResource("3_bee"), ExtResource("4_boar"), ExtResource("5_snail")])
+magnet_scene = ExtResource("6_magnet")
 spawn_interval = 1.5
 obstacle_chance = 0.7
 start_x = 600.0

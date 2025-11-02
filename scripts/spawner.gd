@@ -18,6 +18,14 @@ const DEFAULT_OBSTACLE_SPAWN_X := 1200.0
 @export var coin_collision_radius: float = 36.0
 @export var obstacle_collision_radius: float = 64.0
 @export var vertical_overlap_threshold: float = 48.0
+@export var magnet_scene: PackedScene
+@export var magnet_spawn_min_interval: float = 30.0
+@export var magnet_spawn_max_interval: float = 60.0
+@export var magnet_spawn_y_margin: float = 90.0
+@export var magnet_collision_radius: float = 80.0
+@export_range(0.1, 1.0) var magnet_horizontal_speed_factor: float = 0.6
+@export var magnet_effect_duration: float = 5.0
+@export var magnet_coin_spawn_multiplier: float = 3.0
 @export var speed_increase_interval: float = 15.0  # increase speed every 15 seconds
 @export var speed_increase_rate: float = 1.1    # multiply by 1.1 (10% increase)
 @export var coin_sequence_length: int = 4       # base number of coins in sequence (will be randomized)
@@ -44,7 +52,7 @@ var _last_free_lanes: Array[int] = [0, 1, 2]    # lanes with no obstacle in the 
 
 var _next_spawn_time: float = 0.0
 var _next_obstacle_spawn_time: float = 0.0
-var _rng := RandomNumberGenerator.new()
+var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _game_active: bool = true
 var _speed_timer: float = 0.0
 var _current_speed_multiplier: float = 1.0
@@ -56,14 +64,19 @@ var _player_jump_height: float = 90.0
 var _player_jump_duration: float = 0.6
 var _player_fixed_x: float = -400.0
 var _current_coin_spacing: float = 0.1
+var _current_coin_spacing_base: float = 0.1
 var _current_sequence_is_jump_arc: bool = false
+var _magnet_spawn_timer: float = 0.0
+var _magnet_instance: Node = null
+var _magnet_spawn_multiplier: float = 1.0
 
 func _ready() -> void:
 	_rng.randomize()
 	_next_spawn_time = spawn_interval
 	_next_obstacle_spawn_time = obstacle_spawn_interval
+	_current_coin_spacing_base = coin_sequence_spacing
 	_current_coin_spacing = coin_sequence_spacing
-
+	
 	# Maintain backwards compatibility with previously configured start_x values
 	if coin_spawn_x == DEFAULT_COIN_SPAWN_X and start_x != DEFAULT_COIN_SPAWN_X:
 		coin_spawn_x = start_x
@@ -88,6 +101,9 @@ func _ready() -> void:
 		if player.has_signal("lanes_updated"):
 			player.connect("lanes_updated", Callable(self, "_on_lanes_updated"))
 			print("Connected to player lanes signal")
+		if player.has_signal("magnet_state_changed"):
+			player.connect("magnet_state_changed", Callable(self, "_on_player_magnet_state_changed"))
+			print("Connected to player magnet signal")
 		
 		# Get lanes directly if player already calculated them
 		if player.has_method("get") and "lanes" in player:
@@ -100,6 +116,7 @@ func _ready() -> void:
 		print("Connected to touch controls restart signal")
 
 	_reset_coin_sequence(false)
+	_schedule_next_magnet_spawn()
 	
 	print("Spawner ready! obstacle_scenes count: ", obstacle_scenes.size(), " coin_scene: ", coin_scene)
 	print("Initial coin sequence length: ", _current_sequence_length)
@@ -130,8 +147,8 @@ func _reset_coin_sequence(switch_lane: bool) -> void:
 	if _current_sequence_is_jump_arc:
 		_configure_jump_sequence()
 	else:
-		_current_coin_spacing = coin_sequence_spacing
-	_current_coin_spacing = max(_current_coin_spacing, 0.05)
+		_current_coin_spacing_base = coin_sequence_spacing
+	_recalculate_coin_spacing()
 	_coins_in_sequence = 0
 	var sequence_type = "jump arc" if _current_sequence_is_jump_arc else "lane"
 	print("Initialized ", sequence_type, " coin sequence of length ", _current_sequence_length, " on lane ", _current_lane)
@@ -148,7 +165,8 @@ func _should_spawn_jump_sequence() -> bool:
 func _configure_jump_sequence() -> void:
 	if _player_jump_duration <= 0.0 or _player_jump_height <= 0.0:
 		_current_sequence_is_jump_arc = false
-		_current_coin_spacing = coin_sequence_spacing
+		_current_coin_spacing_base = coin_sequence_spacing
+		_recalculate_coin_spacing()
 		return
 	var min_length: int = 3
 	var max_length: int = coin_sequence_max
@@ -161,7 +179,11 @@ func _configure_jump_sequence() -> void:
 	_current_sequence_length = clamp(_current_sequence_length, min_length, max_length)
 	if _current_sequence_length <= 1:
 		_current_sequence_length = 2
-	_current_coin_spacing = max(jump_sequence_min_spacing, _player_jump_duration / max(1, _current_sequence_length - 1))
+	var base_spacing: float = _player_jump_duration / max(1, _current_sequence_length - 1)
+	if jump_sequence_min_spacing > 0.0:
+		base_spacing = max(jump_sequence_min_spacing, base_spacing)
+	_current_coin_spacing_base = base_spacing
+	_recalculate_coin_spacing()
 
 func _get_coin_spawn_y(lane_idx: int, coin_index: int) -> float:
 	if lane_idx < 0 or lane_idx >= lanes_y.size():
@@ -199,6 +221,12 @@ func _sample_jump_offset(progress: float) -> float:
 func _get_effective_speed() -> float:
 	return world_speed * _current_speed_multiplier
 
+func _recalculate_coin_spacing() -> void:
+	var multiplier: float = max(_magnet_spawn_multiplier, 1.0)
+	if multiplier <= 0.0:
+		multiplier = 1.0
+	_current_coin_spacing = max(0.05, _current_coin_spacing_base / multiplier)
+
 func _process(delta: float) -> void:
 	if not _game_active:
 		return
@@ -230,6 +258,9 @@ func _process(delta: float) -> void:
 			else:
 				_spawn_single_obstacle()
 		_next_obstacle_spawn_time = obstacle_spawn_interval
+	
+	# Handle magnet spawn scheduling
+	_process_magnet_spawn(delta)
 
 func _spawn_coin() -> void:
 	if lanes_y.size() != 3:
@@ -262,12 +293,12 @@ func _spawn_coin() -> void:
 
 	print("Spawning coin ", _coins_in_sequence, "/", _current_sequence_length, " at lane ", lane_idx, " (y=", spawn_y, ") type: ", sequence_type)
 	
-	var inst := scene.instantiate()
+	var inst: Node = scene.instantiate()
 	if !(inst is Node2D):
 		print("Instantiated object is not Node2D!")
 		return
 
-	var n2d := inst as Node2D
+	var n2d: Node2D = inst as Node2D
 	n2d.position = Vector2(coin_spawn_x, spawn_y)
 
 	# Pass current effective world speed into spawned node if it has 'speed'
@@ -305,11 +336,11 @@ func _spawn_single_obstacle() -> void:
 		print("Obstacle scene is null!")
 		return
 	print("Spawning obstacle at lane ", lane_idx, " (y=", lanes_y[lane_idx], ")")
-	var inst := scene.instantiate()
+	var inst: Node = scene.instantiate()
 	if !(inst is Node2D):
 		print("Instantiated object is not Node2D!")
 		return
-	var n2d := inst as Node2D
+	var n2d: Node2D = inst as Node2D
 	n2d.position = Vector2(obstacle_spawn_x, spawn_y)
 	var effective_speed = _get_effective_speed()
 	if inst.has_method("set") and "speed" in inst:
@@ -387,10 +418,10 @@ func _spawn_obstacle_wave() -> void:
 		var scene = obstacle_scenes[obstacle_idx]
 		if scene == null:
 			continue
-		var inst := scene.instantiate()
+		var inst: Node = scene.instantiate()
 		if !(inst is Node2D):
 			continue
-		var n2d := inst as Node2D
+		var n2d: Node2D = inst as Node2D
 		var spawn_y: float = lanes_y[lane_idx]
 		n2d.position = Vector2(obstacle_spawn_x, spawn_y)
 		if inst.has_method("set") and "speed" in inst:
@@ -405,6 +436,87 @@ func _spawn_obstacle_wave() -> void:
 	_last_free_lanes = [0, 1, 2]
 	for b in blocked_lanes:
 		_last_free_lanes.erase(b)
+
+func _process_magnet_spawn(delta: float) -> void:
+	if magnet_scene == null:
+		return
+	if _magnet_instance != null:
+		return
+	if magnet_spawn_max_interval <= 0.0:
+		return
+	_magnet_spawn_timer -= delta
+	if _magnet_spawn_timer <= 0.0:
+		_spawn_magnet_star()
+
+func _spawn_magnet_star() -> void:
+	if magnet_scene == null:
+		return
+	var attempts: int = 0
+	var spawn_y: float = 0.0
+	var valid_position: bool = false
+	while attempts < 6 and not valid_position:
+		spawn_y = _get_magnet_spawn_y()
+		valid_position = not _would_overlap(obstacle_spawn_x, spawn_y, magnet_collision_radius, "magnet")
+		attempts += 1
+	if not valid_position:
+		print("Skipping magnet spawn due to overlap")
+		_schedule_next_magnet_spawn()
+		return
+	var inst: Node = magnet_scene.instantiate()
+	if !(inst is Node2D):
+		print("Magnet scene is not Node2D!")
+		return
+	var node: Node2D = inst as Node2D
+	var spawn_x: float = obstacle_spawn_x + 160.0
+	node.position = Vector2(spawn_x, spawn_y)
+	var effective_speed: float = _get_effective_speed()
+	var horizontal_speed: float = max(80.0, effective_speed * magnet_horizontal_speed_factor)
+	if inst.has_method("set_horizontal_speed"):
+		inst.set_horizontal_speed(horizontal_speed)
+	inst.magnet_duration = magnet_effect_duration
+	inst.spawn_multiplier = magnet_coin_spawn_multiplier
+	if inst.has_signal("collected"):
+		inst.connect("collected", Callable(self, "_on_magnet_star_collected"))
+	if inst.has_signal("finished"):
+		inst.connect("finished", Callable(self, "_on_magnet_star_finished"))
+	_magnet_instance = inst
+	_track_spawn(spawn_x, spawn_y, "magnet", magnet_collision_radius, horizontal_speed)
+	get_parent().add_child(inst)
+	print("Spawned magnet star at ", spawn_x, ", ", spawn_y)
+	_schedule_next_magnet_spawn()
+
+func _get_magnet_spawn_y() -> float:
+	var view_rect: Rect2i = get_viewport().get_visible_rect()
+	var top: float = view_rect.position.y + magnet_spawn_y_margin
+	var bottom: float = view_rect.position.y + view_rect.size.y - magnet_spawn_y_margin
+	if lanes_y.size() > 0:
+		var min_lane: float = lanes_y[0]
+		var max_lane: float = lanes_y[0]
+		for lane_val in lanes_y:
+			min_lane = min(min_lane, lane_val)
+			max_lane = max(max_lane, lane_val)
+		top = clamp(min_lane - magnet_spawn_y_margin, view_rect.position.y, view_rect.position.y + view_rect.size.y - magnet_spawn_y_margin)
+		bottom = clamp(max_lane + magnet_spawn_y_margin, top + 1.0, view_rect.position.y + view_rect.size.y)
+	if bottom <= top:
+		bottom = top + 1.0
+	return _rng.randf_range(top, bottom)
+
+func _on_magnet_star_collected(_duration: float, _multiplier: float) -> void:
+	print("Magnet star collected!")
+
+func _on_magnet_star_finished() -> void:
+	_magnet_instance = null
+
+func _schedule_next_magnet_spawn() -> void:
+	if magnet_scene == null or magnet_spawn_max_interval <= 0.0:
+		_magnet_spawn_timer = 0.0
+		return
+	var min_interval: float = min(magnet_spawn_min_interval, magnet_spawn_max_interval)
+	var max_interval: float = max(magnet_spawn_min_interval, magnet_spawn_max_interval)
+	min_interval = max(1.0, min_interval)
+	max_interval = max(min_interval, max_interval)
+	_magnet_spawn_timer = _rng.randf_range(min_interval, max_interval)
+	print("Next magnet spawn in ", _magnet_spawn_timer, " seconds")
 
 func _would_overlap(spawn_x: float, spawn_y: float, radius: float, type: String = "") -> bool:
 	# Clean up old spawns that have moved far enough away
@@ -444,6 +556,16 @@ func _cleanup_old_spawns() -> void:
 		var estimated_current_x = float(spawn_data.get("x_position", reference_spawn_x)) - (speed * 2.0)  # Estimate 2 seconds of movement
 		return estimated_current_x > left_bound
 	)
+
+func _on_player_magnet_state_changed(active: bool) -> void:
+	if active:
+		_magnet_spawn_multiplier = max(1.0, magnet_coin_spawn_multiplier)
+		print("Spawner received magnet activation. Applying coin spawn multiplier ", _magnet_spawn_multiplier)
+	else:
+		_magnet_spawn_multiplier = 1.0
+		print("Spawner received magnet end. Resetting coin spawn multiplier")
+	_recalculate_coin_spacing()
+	_next_spawn_time = min(_next_spawn_time, _current_coin_spacing)
 
 func _on_coin_collected() -> void:
 	print("Spawner received coin collected signal")
