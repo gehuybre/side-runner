@@ -24,14 +24,15 @@ func _ready() -> void:
 	if game_over_overlay:
 		game_over_overlay.visible = false
 	
-	# Connect to spawner coin collection
-	var spawner = get_parent().get_node("Spawner")
+	# Connect to spawner coin collection (HUD is now in CanvasLayer, so need to go up to world)
+	var world = get_parent().get_parent()  # CanvasLayer -> World
+	var spawner = world.get_node("Spawner")
 	if spawner:
 		# The spawner should connect coins to the HUD, but we can also listen for the signal
 		print("HUD found spawner")
 	
 	# Connect to player death
-	var player = get_parent().get_node("Player")
+	var player = world.get_node("Player")
 	if player and player.has_signal("player_died"):
 		player.connect("player_died", Callable(self, "_on_player_died"))
 		print("HUD connected to player death signal")

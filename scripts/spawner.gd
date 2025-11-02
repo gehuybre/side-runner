@@ -6,7 +6,7 @@ extends Node2D
 
 @export var spawn_interval: float = 1.0         # base interval
 @export var start_x: float = 1200.0             # spawn X (offscreen right)
-@export var world_speed: float = 1098.0          # doubled base speed 
+@export var world_speed: float = 1260.0          # canonical world speed from architecture docs 
 @export var lanes_y: PackedFloat32Array = []    # Will be set by player
 
 @export var min_gap_px: float = 140.0           # ensure spacing between spawns
@@ -230,8 +230,8 @@ func _cleanup_old_spawns() -> void:
 
 func _on_coin_collected() -> void:
 	print("Spawner received coin collected signal")
-	# Tell the HUD to add coin score
-	var hud = get_parent().get_node("HUD")
+	# Tell the HUD to add coin score (HUD is now in CanvasLayer)
+	var hud = get_parent().get_node("CanvasLayer/HUD")
 	if hud and hud.has_method("add_coin_score"):
 		hud.add_coin_score()
 		print("Added coin score to HUD")

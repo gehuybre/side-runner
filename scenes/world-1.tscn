@@ -19,5 +19,8 @@ script = ExtResource("5_camera")
 
 [node name="Spawner" parent="." instance=ExtResource("3_oh5ts")]
 lanes_y = []
+obstacle_chance = 0.8
 
-[node name="HUD" parent="." instance=ExtResource("4_hud")]
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="HUD" parent="CanvasLayer" instance=ExtResource("4_hud")]

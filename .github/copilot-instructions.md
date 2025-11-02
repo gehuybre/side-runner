@@ -12,7 +12,7 @@ This is a Godot 4.5 endless runner game where a player character runs through 3 
 - **Tween-based transitions**: Lane changes use Godot's Tween system with `TRANS_QUAD` and `EASE_OUT`
 
 ### World Speed Synchronization
-- **Global speed constant**: `260.0` pixels/second is the canonical world speed
+- **Global speed constant**: increasing to increase difficulty  pixels/second is the canonical world speed
 - **Critical sync points**: 
   - Parallax background scrolling (`parallax_scroller.gd`)
   - Spawner world speed (`spawner.gd` `world_speed`)
