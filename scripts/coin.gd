@@ -4,7 +4,7 @@ extends Node2D
 signal collected
 
 @export var speed: float = 260.0  # Movement speed (sync with world speed)
-@export var destroy_x: float = -800.0  # X position to destroy coin (moved further left)
+@export var destroy_x: float = -1200.0  # X position to destroy coin (extended for longer visibility)
 
 func _ready() -> void:
 	# Connect collision detection

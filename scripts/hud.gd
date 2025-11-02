@@ -13,11 +13,21 @@ var coin_score: int = 0  # Score from coins collected
 var total_score: int = 0 # Combined score
 var time_alive: float = 0.0
 var game_active: bool = true
+var game_manager: Node = null
+var high_score: int = 0
+var is_new_high_score: bool = false
 
 signal game_over(final_score: int, time_survived: float)
 
 func _ready() -> void:
 	print("HUD ready! Initial score: ", total_score)
+	
+	# Get reference to GameManager
+	game_manager = get_node("/root/GameManager") if get_node_or_null("/root/GameManager") else null
+	if game_manager:
+		high_score = game_manager.get_high_score()
+		print("Current high score: ", high_score)
+	
 	_update_display()
 	
 	# Make sure game over overlay is hidden
@@ -59,18 +69,32 @@ func add_coin_score() -> void:
 
 func _update_display() -> void:
 	if score_label:
-		score_label.text = "Score: " + str(total_score)
+		score_label.text = "Score: " + str(total_score) + "\nHigh: " + str(high_score)
 
 func _on_player_died() -> void:
 	game_active = false
+	
+	# Check for new high score
+	if game_manager:
+		is_new_high_score = game_manager.update_high_score(total_score)
+		high_score = game_manager.get_high_score()
+	
 	print("Game Over! Final score: ", total_score, " (Time: ", time_score, " + Coins: ", coin_score, ") Time survived: ", time_alive, " seconds")
+	if is_new_high_score:
+		print("NEW HIGH SCORE!")
+	
 	game_over.emit(total_score, time_alive)
 	
 	# Show game over overlay with final score
 	if game_over_overlay:
 		game_over_overlay.visible = true
 	if final_score_label:
-		final_score_label.text = "Final Score: " + str(total_score) + "\n(Time: " + str(time_score) + " + Coins: " + str(coin_score) + ")"
+		var score_text = "Final Score: " + str(total_score) + "\n(Time: " + str(time_score) + " + Coins: " + str(coin_score) + ")"
+		if is_new_high_score:
+			score_text += "\n\n🏆 NEW HIGH SCORE! 🏆"
+		else:
+			score_text += "\nHigh Score: " + str(high_score)
+		final_score_label.text = score_text
 
 func reset_game() -> void:
 	time_score = 0
@@ -78,6 +102,11 @@ func reset_game() -> void:
 	total_score = 0
 	time_alive = 0.0
 	game_active = true
+	is_new_high_score = false
+	
+	# Refresh high score from game manager
+	if game_manager:
+		high_score = game_manager.get_high_score()
 	
 	# Hide game over overlay
 	if game_over_overlay:

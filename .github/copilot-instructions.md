@@ -1,83 +1,94 @@
 # GitHub Copilot Instructions - Side Runner Game
 
 ## Project Overview
-This is a Godot 4.5 endless runner game where a player character runs through 3 fixed lanes, avoiding obstacles and collecting items. The game uses a component-based architecture with modular systems for player movement, obstacle spawning, and parallax backgrounds.
+Godot 4.5 endless runner with 3-lane movement, obstacle avoidance, and mobile/desktop support. Uses component-based architecture with autoloaded singletons for cross-scene state management.
 
-## Core Architecture Patterns
+## Architecture & Critical Patterns
 
-### Lane-Based Movement System
-- **3-lane constraint**: All movement and spawning occurs on exactly 3 Y-coordinate lanes
-- **Coordinate synchronization**: Player (`scripts/player.gd`) and Spawner (`scripts/spawner.gd`) must use matching `lanes_y` arrays
-- **Fixed X positioning**: Player stays at a fixed X coordinate (`fixed_x = -400.0`) while world scrolls past
-- **Tween-based transitions**: Lane changes use Godot's Tween system with `TRANS_QUAD` and `EASE_OUT`
-
-### World Speed Synchronization
-- **Global speed constant**: increasing to increase difficulty  pixels/second is the canonical world speed
-- **Critical sync points**: 
-  - Parallax background scrolling (`parallax_scroller.gd`)
-  - Spawner world speed (`spawner.gd` `world_speed`)
-  - Obstacle movement speed (`obstacle-bee.gd` `speed`)
-- **Pattern**: Always pass `world_speed` from spawner to spawned obstacles via property setting
-
-### Component Communication via Signals
-- **Obstacle pattern**: All obstacles emit `hit_player` signal on collision
-- **Collection pattern**: Collectibles emit `collected` signal (planned but not fully implemented)
-- **Connection approach**: Spawner connects to signals during `instantiate()` using `Callable(self, "_on_*")`
-
-### Scene Instantiation & Property Injection
+### Lane System Synchronization
+**CRITICAL**: Player and Spawner must maintain identical lane coordinates via signal communication:
 ```gdscript
-# Standard spawning pattern from spawner.gd
-var inst := scene.instantiate()
-var n2d := inst as Node2D
-n2d.position = Vector2(start_x, lanes_y[lane_idx])
+# Player emits lanes_updated signal in _ready()
+lanes_updated.emit(lanes)
+# Spawner receives and syncs: player.lanes_updated.connect(_on_lanes_updated)
+```
+- Player calculates lanes dynamically based on `lane_gap_ratio` (25% of viewport height)
+- Custom lanes override via `custom_lanes_y` export array
+- Lane index clamped to [0,2] range with `clamp(lane_index, 0, lanes.size() - 1)`
 
-# Inject world speed if obstacle supports it
+### World Speed Coordination (1260.0 px/s canonical)
+**Must sync across**: Spawner `world_speed` → Obstacles `speed` → Parallax `autoscroll`
+```gdscript
+# Spawner injects speed into obstacles during instantiation
 if inst.has_method("set") and "speed" in inst:
     inst.set("speed", world_speed)
 ```
 
-## File Organization & Naming
-- **Scripts**: `scripts/{component-name}.gd` (kebab-case for multi-word components)
-- **Scenes**: `scenes/{component-name}.tscn` (matches script naming)
-- **Assets**: Organized by type (`Character/`, `Background/`, `Mob/`, etc.)
-- **Exports**: All sprites as `.png` with `.import` files, source `.aseprite` files preserved
+### Autoload Singletons Pattern
+- `GameManager`: Scene management, high score persistence to `user://highscore.save`
+- `MobileManager`: Platform detection, touch control auto-configuration
+- Access via direct reference: `GameManager.update_high_score(score)`
 
-## Development Patterns
+### Signal-Based Collision System
+Obstacles emit `hit_player` signal, use `Area2D.body_entered` with player detection logic:
+```gdscript
+# Standard pattern in all obstacle scripts
+if parent and parent.name == "Player":
+    hit_player.emit()
+    queue_free()
+```
 
-### Export Variable Conventions
-- Use `@export` for all tweakable parameters (movement speeds, spawn rates, positions)
-- Include default values and inline comments explaining usage
-- Group related exports together (e.g., all spawn timing variables)
+## Mobile Architecture
 
-### Input Handling
-- Custom input actions defined in `project.godot`: `lane_up` (Up Arrow), `lane_down` (Down Arrow)
-- Use `_unhandled_input()` for player controls to avoid conflicts
-- Validate lane bounds with `clamp()` before applying movement
+### Dual Input System
+- **Desktop**: `lane_up`/`lane_down` input actions (Up/Down arrows, Escape for pause)
+- **Mobile**: Touch controls auto-discovered via scene tree traversal
+- Player connects to touch controls: `touch_controls.lane_up_pressed.connect(_on_touch_lane_up)`
 
-### Parallax Implementation Choice
-- **Two implementations**: `ParallaxBackground` (current) and `Parallax2D` (alternative)
-- **Current**: Multi-layer system with manual layer multipliers (`[0.25, 0.5, 1.0]`)
-- **Auto-configuration**: Both auto-detect sprite widths for seamless looping
+### Platform Detection & Auto-Configuration
+```gdscript
+# MobileManager._detect_platform()
+is_mobile_platform = OS.get_name() in ["Android", "iOS"]
+# Touch controls show/hide automatically via MobileManager._configure_touch_controls()
+```
 
-### Obstacle Lifecycle
-1. Spawned at `start_x` (right edge of screen)
-2. Move left at world speed in `_process()`
-3. Emit signals on collision/collection
-4. Auto-destroy at `destroy_x` (far left to ensure cleanup)
+## Development Workflows
 
-## Critical Coordination Points
-- **Lane Y-coordinates**: Must match between player.gd and spawner.gd
-- **World speed**: Keep synchronized across parallax, spawner, and all moving objects
-- **Collision detection**: Use Area2D with `body_entered` signal for obstacle interactions
-- **Scene references**: Spawner holds Array[PackedScene] of obstacle types for random selection
+### Testing Mobile on Desktop
+- Set `MobileManager.force_mobile_mode = true` in editor
+- Touch controls become visible and functional with mouse
+- Use `pointing/emulate_touch_from_mouse=true` project setting
 
-## Debugging & Testing
-- Extensive debug printing in spawner for tracking spawn events and failures
-- Position logging in obstacles for movement verification
-- Always test lane transitions and world speed consistency when making changes
+### Build Commands (macOS)
+```bash
+# Desktop test
+/Applications/Godot.app/Contents/MacOS/Godot --path . scenes/world-1.tscn
 
-## TODO System Integration
-Comments mark incomplete features for game state management:
-- Score system integration points in spawner
-- Health/damage system hooks in obstacle collision
-- HUD and GameManager classes (not yet implemented)
+# Android export (requires Android SDK setup)
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export ANDROID_HOME=~/android-sdk
+/Applications/Godot.app/Contents/MacOS/Godot --headless --export-debug "Android" output.apk --path .
+```
+
+### Scene Instantiation Pattern
+```gdscript
+# spawner.gd standard pattern
+var inst := scene.instantiate()
+var n2d := inst as Node2D
+n2d.position = Vector2(start_x, lanes_y[lane_idx])
+get_parent().add_child(inst)  # Add to world, not spawner
+```
+
+## File Organization Rules
+- **Scripts**: `scripts/component-name.gd` (kebab-case for multi-word)
+- **Scenes**: `scenes/component-name.tscn` (matches script naming)
+- **Main scene**: `main_menu.tscn` (defined in project.godot)
+- **Assets**: By type (`Character/`, `Background/`, `Mob/`) with `.aseprite` sources preserved
+
+## Common Pitfalls
+- **Lane desync**: Always emit `lanes_updated` signal when player lanes change
+- **Speed mismatch**: Verify `world_speed` propagation to all moving elements
+- **Touch control discovery**: Check scene tree paths in `_connect_touch_controls()`
+- **Mobile testing**: Use `force_mobile_mode` rather than changing OS detection
+- **Collision detection**: Check both direct Player node and parent relationships
+- **Scene changes**: Use `GameManager.change_to_scene()` not direct `get_tree().change_scene_to_file()`
