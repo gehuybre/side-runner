@@ -43,12 +43,11 @@ animations = [{
 
 [node name="ObstableBee2" type="Node2D"]
 texture_filter = 1
-scale = Vector2(2, 2)
 script = ExtResource("1_script")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 position = Vector2(-4, 0)
-scale = Vector2(3, 3)
+scale = Vector2(2.5, 2.5)
 sprite_frames = SubResource("SpriteFrames_4g7aq")
 autoplay = "default"
 frame_progress = 0.24624923
@@ -56,5 +55,5 @@ frame_progress = 0.24624923
 [node name="Area2D" type="Area2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
-scale = Vector2(3, 3)
+scale = Vector2(2, 2)
 shape = SubResource("CircleShape2D_6whpj")

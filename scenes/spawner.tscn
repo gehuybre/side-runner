@@ -13,4 +13,6 @@ obstacle_scenes = Array[PackedScene]([ExtResource("3_bee"), ExtResource("4_boar"
 spawn_interval = 1.5
 obstacle_chance = 0.7
 start_x = 600.0
+coin_spawn_x = 600.0
+obstacle_spawn_x = 1100.0
 lanes_y = PackedFloat32Array(0, 120, 240)

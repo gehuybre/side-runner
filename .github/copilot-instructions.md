@@ -16,7 +16,7 @@ lanes_updated.emit(lanes)
 - Custom lanes override via `custom_lanes_y` export array
 - Lane index clamped to [0,2] range with `clamp(lane_index, 0, lanes.size() - 1)`
 
-### World Speed Coordination (1260.0 px/s canonical)
+### World Speed Coordination (630.0 px/s canonical)
 **Must sync across**: Spawner `world_speed` → Obstacles `speed` → Parallax `autoscroll`
 ```gdscript
 # Spawner injects speed into obstacles during instantiation
@@ -55,19 +55,25 @@ is_mobile_platform = OS.get_name() in ["Android", "iOS"]
 ## Development Workflows
 
 ### Testing Mobile on Desktop
-- Set `MobileManager.force_mobile_mode = true` in editor
+- Set `MobileManager.force_mobile_mode = true` in editor (or run `./test-mobile-mode.sh` to toggle the flag and launch Godot)
 - Touch controls become visible and functional with mouse
 - Use `pointing/emulate_touch_from_mouse=true` project setting
 
-### Build Commands (macOS)
+### Build & Deploy (macOS)
 ```bash
 # Desktop test
 /Applications/Godot.app/Contents/MacOS/Godot --path . scenes/world-1.tscn
 
-# Android export (requires Android SDK setup)
+# Full Android pipeline (export + sideload to the first connected device)
+./build-and-sideload.sh
+
+# Manual export (requires Android SDK + Java configured)
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
-export ANDROID_HOME=~/android-sdk
+export ANDROID_HOME=$HOME/Library/Android/sdk
 /Applications/Godot.app/Contents/MacOS/Godot --headless --export-debug "Android" output.apk --path .
+
+# Manual sideload if you already have an APK
+./sideload-apk.sh path/to/app.apk
 ```
 
 ### Scene Instantiation Pattern
@@ -92,3 +98,9 @@ get_parent().add_child(inst)  # Add to world, not spawner
 - **Mobile testing**: Use `force_mobile_mode` rather than changing OS detection
 - **Collision detection**: Check both direct Player node and parent relationships
 - **Scene changes**: Use `GameManager.change_to_scene()` not direct `get_tree().change_scene_to_file()`
+
+## Tooling Notes
+- `export-android.sh` performs a headless export into `/tmp/android-export/side-runner.apk` after syncing editor SDK paths.
+- `sideload-config.conf` holds defaults for `sideload-apk.sh` (APK path, package id); scripts should read from it instead of hardcoding values.
+- `android-diagnostic.sh` validates Java/SDK paths and Godot export templates; run when export scripts fail.
+- Prefer keeping generated APK/ZIP artifacts out of version control or move large binaries to Git LFS to avoid future push warnings.

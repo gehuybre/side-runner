@@ -9,6 +9,7 @@ signal lane_up_pressed
 signal lane_down_pressed
 signal pause_pressed
 signal restart_pressed
+signal jump_pressed
 
 var touch_start_pos: Vector2
 var touch_start_time: float
@@ -177,6 +178,7 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 				_trigger_pause()
 			
 			last_tap_time = current_time
+			is_touching = false
 			return
 		
 		# PRIORITY 2: For game over and pause states, only handle areas outside UI
@@ -185,10 +187,12 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 		if is_game_over and not _is_touch_on_ui_area(event.position):
 			print("Game over detected - touch outside UI restarts game")
 			get_tree().reload_current_scene()
+			is_touching = false
 			return
 		elif get_tree().paused and not _is_touch_on_ui_area(event.position):
 			print("Game paused - touch outside UI resumes game")
 			_trigger_pause()  # This will handle resume
+			is_touching = false
 			return
 	else:
 		# Touch ended
@@ -256,18 +260,10 @@ func _handle_touch_end(event: InputEventScreenTouch) -> void:
 	
 	print("Touch ended - Duration: ", touch_duration, " Distance: ", touch_distance)
 	
-	# If it was a quick tap (not a drag), treat as lane change based on screen position
+	# If it was a quick tap (not a drag), trigger jump
 	if touch_duration < tap_max_duration and touch_distance < swipe_threshold:
-		var screen_center_y = get_viewport().get_visible_rect().size.y * 0.5
-		
-		print("Quick tap detected - Center Y: ", screen_center_y, " Touch Y: ", event.position.y)
-		
-		if event.position.y < screen_center_y:
-			print("Tap up detected")
-			_trigger_lane_up()
-		else:
-			print("Tap down detected")
-			_trigger_lane_down()
+		print("Quick tap detected - triggering jump")
+		_trigger_jump()
 
 func _trigger_lane_up() -> void:
 	print("Touch: Lane up triggered - Platform: ", OS.get_name())
@@ -280,6 +276,12 @@ func _trigger_lane_down() -> void:
 	if has_node("/root/MobileManager"):
 		get_node("/root/MobileManager").trigger_haptic_light()
 	lane_down_pressed.emit()
+
+func _trigger_jump() -> void:
+	print("Touch: Jump triggered - Platform: ", OS.get_name())
+	if has_node("/root/MobileManager"):
+		get_node("/root/MobileManager").trigger_haptic_light()
+	jump_pressed.emit()
 
 func _trigger_pause() -> void:
 	print("Touch: Pause triggered - Platform: ", OS.get_name())
