@@ -1,0 +1,148 @@
+[gd_scene load_steps=7 format=3 uid="uid://br4kmnusspqq0"]
+
+[ext_resource type="Script" uid="uid://v06qq15r2vw7" path="res://scripts/hud.gd" id="1_hud"]
+[ext_resource type="FontFile" uid="uid://c6mmtln1mkhu8" path="res://assets/fonts/Mochibop-Demo.ttf" id="2_font"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_score_bg"]
+bg_color = Color(0, 0, 0, 0.6)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.9, 0.2, 0.8)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="LabelSettings" id="LabelSettings_score"]
+font = ExtResource("2_font")
+font_size = 28
+font_color = Color(1, 0.9, 0.2, 1)
+outline_size = 3
+outline_color = Color(0.2, 0.1, 0, 1)
+shadow_size = 2
+shadow_color = Color(0, 0, 0, 0.7)
+shadow_offset = Vector2(2, 2)
+
+[sub_resource type="LabelSettings" id="LabelSettings_gameover"]
+font = ExtResource("2_font")
+font_size = 48
+font_color = Color(1, 0.3, 0.3, 1)
+outline_size = 4
+outline_color = Color(0.4, 0, 0, 1)
+shadow_size = 3
+shadow_color = Color(0, 0, 0, 0.8)
+shadow_offset = Vector2(3, 3)
+
+[sub_resource type="LabelSettings" id="LabelSettings_time"]
+font = ExtResource("2_font")
+font_size = 24
+font_color = Color(0.3, 0.8, 1, 1)
+outline_size = 2
+outline_color = Color(0, 0.2, 0.4, 1)
+shadow_color = Color(0, 0, 0, 0.6)
+
+[node name="HUD" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_hud")
+
+[node name="TopBar" type="Panel" parent="."]
+layout_mode = 0
+anchor_right = 1.0
+offset_bottom = 80.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_score_bg")
+
+[node name="ScoreContainer" type="MarginContainer" parent="TopBar"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -25.0
+offset_bottom = 25.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 5
+
+[node name="ScoreLabel" type="Label" parent="TopBar/ScoreContainer"]
+layout_mode = 2
+text = "Score: 0"
+label_settings = SubResource("LabelSettings_score")
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="GameOverOverlay" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="GameOverBackground" type="ColorRect" parent="GameOverOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="GameOverPanel" type="Panel" parent="GameOverOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -150.0
+offset_right = 300.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_score_bg")
+
+[node name="GameOverContainer" type="VBoxContainer" parent="GameOverOverlay/GameOverPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="GameOverLabel" type="Label" parent="GameOverOverlay/GameOverPanel/GameOverContainer"]
+layout_mode = 2
+text = "GAME OVER"
+label_settings = SubResource("LabelSettings_gameover")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="FinalScoreLabel" type="Label" parent="GameOverOverlay/GameOverPanel/GameOverContainer"]
+layout_mode = 2
+text = "Final Score: 0"
+label_settings = SubResource("LabelSettings_score")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RestartLabel" type="Label" parent="GameOverOverlay/GameOverPanel/GameOverContainer"]
+layout_mode = 2
+text = "Press R, SPACE, or ENTER to restart"
+label_settings = SubResource("LabelSettings_time")
+horizontal_alignment = 1
+vertical_alignment = 1

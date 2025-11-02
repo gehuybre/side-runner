@@ -1,0 +1,60 @@
+[gd_scene load_steps=9 format=3 uid="uid://fa6d4d2ycwno"]
+
+[ext_resource type="Texture2D" uid="uid://ba6eksjur4klj" path="res://assets/Mob/Small Bee/Attack/Attack-Sheet.png" id="1_authl"]
+[ext_resource type="Script" uid="uid://boqcix282ss5w" path="res://scripts/obstacle-bee.gd" id="1_script"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6whpj"]
+atlas = ExtResource("1_authl")
+region = Rect2(0, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5qgxh"]
+atlas = ExtResource("1_authl")
+region = Rect2(64, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_g8wcv"]
+atlas = ExtResource("1_authl")
+region = Rect2(128, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_odcye"]
+atlas = ExtResource("1_authl")
+region = Rect2(192, 0, 64, 64)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_4g7aq"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6whpj")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_5qgxh")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_g8wcv")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_odcye")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_6whpj"]
+
+[node name="ObstableBee2" type="Node2D"]
+texture_filter = 1
+scale = Vector2(2, 2)
+script = ExtResource("1_script")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(-4, 0)
+scale = Vector2(3, 3)
+sprite_frames = SubResource("SpriteFrames_4g7aq")
+autoplay = "default"
+frame_progress = 0.24624923
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+scale = Vector2(3, 3)
+shape = SubResource("CircleShape2D_6whpj")

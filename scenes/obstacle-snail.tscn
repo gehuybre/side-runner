@@ -1,0 +1,88 @@
+[gd_scene load_steps=13 format=3 uid="uid://bx0nu6uig82vk"]
+
+[ext_resource type="Script" uid="uid://boqcix282ss5w" path="res://scripts/obstacle-bee.gd" id="1_liou5"]
+[ext_resource type="Texture2D" uid="uid://dw1fgsmkved5h" path="res://assets/Mob/Snail/walk-Sheet.png" id="2_liou5"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4tobp"]
+atlas = ExtResource("2_liou5")
+region = Rect2(0, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0unj0"]
+atlas = ExtResource("2_liou5")
+region = Rect2(48, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ivwnw"]
+atlas = ExtResource("2_liou5")
+region = Rect2(96, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_l2vjk"]
+atlas = ExtResource("2_liou5")
+region = Rect2(144, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_q5a1q"]
+atlas = ExtResource("2_liou5")
+region = Rect2(192, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0wxxt"]
+atlas = ExtResource("2_liou5")
+region = Rect2(240, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ri15a"]
+atlas = ExtResource("2_liou5")
+region = Rect2(288, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_s4bts"]
+atlas = ExtResource("2_liou5")
+region = Rect2(336, 0, 48, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_4g7aq"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4tobp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0unj0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ivwnw")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_l2vjk")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_q5a1q")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0wxxt")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ri15a")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_s4bts")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_jvdv2"]
+
+[node name="ObstableBee" type="Node2D"]
+texture_filter = 1
+scale = Vector2(2, 2)
+script = ExtResource("1_liou5")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+scale = Vector2(3, 3)
+sprite_frames = SubResource("SpriteFrames_4g7aq")
+autoplay = "default"
+frame_progress = 0.24624923
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+position = Vector2(0, 16)
+scale = Vector2(3, 3)
+shape = SubResource("CircleShape2D_jvdv2")

@@ -1,0 +1,74 @@
+[gd_scene load_steps=11 format=3 uid="uid://c0agqjtfmvhxl"]
+
+[ext_resource type="Script" uid="uid://boqcix282ss5w" path="res://scripts/obstacle-bee.gd" id="1_tftvr"]
+[ext_resource type="Texture2D" uid="uid://ye1evdy0qcj8" path="res://assets/Mob/Boar/Walk/Walk-Base-Sheet-White.png" id="2_tftvr"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_26frq"]
+atlas = ExtResource("2_tftvr")
+region = Rect2(0, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_sr0bd"]
+atlas = ExtResource("2_tftvr")
+region = Rect2(48, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fp8hx"]
+atlas = ExtResource("2_tftvr")
+region = Rect2(96, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7rmxg"]
+atlas = ExtResource("2_tftvr")
+region = Rect2(144, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_tyf4u"]
+atlas = ExtResource("2_tftvr")
+region = Rect2(192, 0, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8a22p"]
+atlas = ExtResource("2_tftvr")
+region = Rect2(240, 0, 48, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_4g7aq"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_26frq")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_sr0bd")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_fp8hx")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_7rmxg")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_tyf4u")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_8a22p")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_jvdv2"]
+
+[node name="ObstableBee2" type="Node2D"]
+texture_filter = 1
+scale = Vector2(2, 2)
+script = ExtResource("1_tftvr")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+scale = Vector2(3, 3)
+sprite_frames = SubResource("SpriteFrames_4g7aq")
+autoplay = "default"
+frame_progress = 0.016405314
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+position = Vector2(0, 8)
+scale = Vector2(3, 3)
+shape = SubResource("CircleShape2D_jvdv2")

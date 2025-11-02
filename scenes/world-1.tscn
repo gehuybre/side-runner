@@ -1,0 +1,23 @@
+[gd_scene load_steps=6 format=3 uid="uid://b01i347y0c7ov"]
+
+[ext_resource type="PackedScene" uid="uid://bth25f2nj0y4" path="res://scenes/player.tscn" id="1_kfcj1"]
+[ext_resource type="PackedScene" uid="uid://dvc63sdiiuhn7" path="res://scenes/ParallaxScroller.tscn" id="2_oh5ts"]
+[ext_resource type="PackedScene" uid="uid://bxywatywq4fr4" path="res://scenes/spawner.tscn" id="3_oh5ts"]
+[ext_resource type="PackedScene" uid="uid://br4kmnusspqq0" path="res://scenes/hud.tscn" id="4_hud"]
+[ext_resource type="Script" uid="uid://cju8jsfxp3f8a" path="res://scripts/camera_controller.gd" id="5_camera"]
+
+[node name="World1" type="Node2D"]
+
+[node name="Player" parent="." instance=ExtResource("1_kfcj1")]
+texture_filter = 1
+scale = Vector2(3, 3)
+
+[node name="ParallaxScroller" parent="." instance=ExtResource("2_oh5ts")]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+script = ExtResource("5_camera")
+
+[node name="Spawner" parent="." instance=ExtResource("3_oh5ts")]
+lanes_y = []
+
+[node name="HUD" parent="." instance=ExtResource("4_hud")]

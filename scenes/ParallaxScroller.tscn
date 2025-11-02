@@ -1,0 +1,65 @@
+[gd_scene load_steps=6 format=3 uid="uid://dvc63sdiiuhn7"]
+
+[ext_resource type="Script" uid="uid://cap0lyk58amer" path="res://scripts/Parallax2DScroller.gd" id="1_5i5gs"]
+[ext_resource type="Texture2D" uid="uid://cwd8dt7uatr8o" path="res://assets/Background/Jungle/1.Backround.png" id="2_5i5gs"]
+[ext_resource type="Texture2D" uid="uid://cj2urpulv1f18" path="res://assets/Background/Jungle/2.Trees_back.png" id="3_dsoiv"]
+[ext_resource type="Texture2D" uid="uid://h84m24g6xj24" path="res://assets/Background/Jungle/3.Trees_front.png" id="4_bb7im"]
+[ext_resource type="Texture2D" uid="uid://cxqgyssb6ful4" path="res://assets/Background/Jungle/4.Ground.png" id="5_jwcs3"]
+
+[node name="ParallaxScroller" type="Node2D"]
+
+[node name="Background" type="Parallax2D" parent="."]
+z_index = -20
+repeat_size = Vector2(1920, 0)
+autoscroll = Vector2(-30, 0)
+script = ExtResource("1_5i5gs")
+speed_multiplier = 0.3
+
+[node name="BackgroundSprite" type="Sprite2D" parent="Background"]
+texture_filter = 1
+texture_repeat = 2
+texture = ExtResource("2_5i5gs")
+region_enabled = true
+region_rect = Rect2(0, 0, 1920, 180)
+
+[node name="TreesBack" type="Parallax2D" parent="."]
+z_index = -10
+repeat_size = Vector2(1920, 0)
+autoscroll = Vector2(-60, 0)
+script = ExtResource("1_5i5gs")
+speed_multiplier = 0.5
+
+[node name="TreesBackSprite" type="Sprite2D" parent="TreesBack"]
+texture_filter = 1
+texture_repeat = 2
+texture = ExtResource("3_dsoiv")
+region_enabled = true
+region_rect = Rect2(0, 0, 1920, 180)
+
+[node name="TreesFront" type="Parallax2D" parent="."]
+z_index = -5
+repeat_size = Vector2(1920, 0)
+autoscroll = Vector2(-90, 0)
+script = ExtResource("1_5i5gs")
+speed_multiplier = 0.7
+
+[node name="TreesFrontSprite" type="Sprite2D" parent="TreesFront"]
+texture_filter = 1
+texture_repeat = 2
+texture = ExtResource("4_bb7im")
+region_enabled = true
+region_rect = Rect2(0, 0, 1920, 180)
+
+[node name="Ground" type="Parallax2D" parent="."]
+z_index = 0
+repeat_size = Vector2(1920, 0)
+autoscroll = Vector2(-120, 0)
+script = ExtResource("1_5i5gs")
+speed_multiplier = 1.0
+
+[node name="GroundSprite" type="Sprite2D" parent="Ground"]
+texture_filter = 1
+texture_repeat = 2
+texture = ExtResource("5_jwcs3")
+region_enabled = true
+region_rect = Rect2(0, 0, 1920, 180)
