@@ -3,10 +3,12 @@ extends Control
 
 @export var score_per_second: int = 1
 @export var score_per_coin: int = 5
+@export var speed_boost_display_time: float = 2.5
 
 @onready var score_label: Label = $TopBar/ScoreContainer/ScoreLabel
 @onready var game_over_overlay: Control = $GameOverOverlay
 @onready var final_score_label: Label = $GameOverOverlay/GameOverPanel/GameOverContainer/FinalScoreLabel
+@onready var boost_label: Label = $BoostAnnouncement
 
 var time_score: int = 0  # Score from time alive
 var coin_score: int = 0  # Score from coins collected
@@ -16,6 +18,7 @@ var game_active: bool = true
 var game_manager: Node = null
 var high_score: int = 0
 var is_new_high_score: bool = false
+var _speed_boost_timer: float = 0.0
 
 signal game_over(final_score: int, time_survived: float)
 
@@ -42,22 +45,33 @@ func _ready() -> void:
 		game_over_overlay.visible = false
 	
 	# Connect to spawner coin collection (HUD is now in CanvasLayer, so need to go up to world)
-	var world = get_parent().get_parent()  # CanvasLayer -> World
-	var spawner = world.get_node("Spawner")
-	if spawner:
-		# The spawner should connect coins to the HUD, but we can also listen for the signal
-		print("HUD found spawner")
-	
-	# Connect to player death
-	var player = world.get_node("Player")
-	if player and player.has_signal("player_died"):
-		player.connect("player_died", Callable(self, "_on_player_died"))
-		print("HUD connected to player death signal")
+	var canvas_layer = get_parent()
+	if canvas_layer:
+		var world = canvas_layer.get_parent()  # CanvasLayer -> World
+		if world:
+			var spawner = world.get_node_or_null("Spawner")
+			if spawner:
+				print("HUD found spawner")
+				if spawner.has_signal("speed_boosted"):
+					spawner.connect("speed_boosted", Callable(self, "_on_speed_boosted"))
+			
+			# Connect to player death
+			var player = world.get_node_or_null("Player")
+			if player and player.has_signal("player_died"):
+				player.connect("player_died", Callable(self, "_on_player_died"))
+				print("HUD connected to player death signal")
+
+	if boost_label:
+		boost_label.visible = false
+		boost_label.modulate = Color(1, 1, 1, 0)
 
 func _process(delta: float) -> void:
 	if not game_active:
+		_update_boost_indicator(delta)
 		return
 		
+	_update_boost_indicator(delta)
+	
 	# Add time-based score
 	time_alive += delta
 	var new_time_score = int(time_alive) * score_per_second
@@ -79,6 +93,9 @@ func _update_display() -> void:
 		score_label.text = "Score: " + str(total_score) + "\nHigh: " + str(high_score)
 
 func _on_player_died() -> void:
+	_speed_boost_timer = 0.0
+	if boost_label:
+		boost_label.visible = false
 	game_active = false
 	
 	# Check for new high score
@@ -118,6 +135,10 @@ func reset_game() -> void:
 	# Hide game over overlay
 	if game_over_overlay:
 		game_over_overlay.visible = false
+	if boost_label:
+		boost_label.visible = false
+		boost_label.modulate = Color(1, 1, 1, 0)
+	_speed_boost_timer = 0.0
 	
 	_update_display()
 	print("HUD reset for new game")
@@ -137,3 +158,22 @@ func _on_restart_button_pressed() -> void:
 func _on_quit_button_pressed() -> void:
 	print("Game over quit button pressed - returning to main menu")
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+
+func _on_speed_boosted(multiplier: float) -> void:
+	_speed_boost_timer = speed_boost_display_time
+	if boost_label:
+		boost_label.text = "BOOSTED!"
+		boost_label.visible = true
+		boost_label.modulate = Color(1, 1, 1, 1)
+
+func _update_boost_indicator(delta: float) -> void:
+	if not boost_label or not boost_label.visible:
+		return
+	if _speed_boost_timer > 0.0:
+		_speed_boost_timer -= delta
+		var alpha: float = clamp(_speed_boost_timer / speed_boost_display_time, 0.0, 1.0)
+		var color: Color = boost_label.modulate
+		color.a = alpha
+		boost_label.modulate = color
+	else:
+		boost_label.visible = false

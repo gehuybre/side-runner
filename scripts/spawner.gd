@@ -1,6 +1,8 @@
 # Spawner.gd
 extends Node2D
 
+signal speed_boosted(multiplier: float)
+
 @export var coin_scene: PackedScene
 @export var obstacle_scenes: Array[PackedScene] = []  # Array of different obstacle types
 
@@ -237,6 +239,7 @@ func _process(delta: float) -> void:
 		_speed_timer = 0.0
 		_current_speed_multiplier *= speed_increase_rate
 		print("Speed increased! New multiplier: ", _current_speed_multiplier, " Effective speed: ", world_speed * _current_speed_multiplier)
+		speed_boosted.emit(_current_speed_multiplier)
 		
 		# Update parallax scroller speed
 		var parallax = get_parent().get_node("ParallaxScroller")
