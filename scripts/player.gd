@@ -30,17 +30,21 @@ func _connect_touch_controls() -> void:
 	# Look for touch controls in the scene tree
 	var world = get_parent()
 	if world:
-		touch_controls = world.get_node_or_null("CanvasLayer/TouchControls")
+		# Try new location first (TouchControlsLayer)
+		touch_controls = world.get_node_or_null("TouchControlsLayer/TouchControls")
 		if not touch_controls:
-			# Try alternative paths
-			touch_controls = world.get_node_or_null("UI/TouchControls")
+			# Try old location for backward compatibility
+			touch_controls = world.get_node_or_null("CanvasLayer/TouchControls")
 			if not touch_controls:
-				touch_controls = world.get_node_or_null("TouchControls")
+				# Try alternative paths
+				touch_controls = world.get_node_or_null("UI/TouchControls")
+				if not touch_controls:
+					touch_controls = world.get_node_or_null("TouchControls")
 		
 		if touch_controls:
 			touch_controls.lane_up_pressed.connect(_on_touch_lane_up)
 			touch_controls.lane_down_pressed.connect(_on_touch_lane_down)
-			print("Player connected to touch controls")
+			print("Player connected to touch controls at: ", touch_controls.get_path())
 		else:
 			print("No touch controls found in scene")
 

@@ -35,6 +35,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+process_mode = 4
 script = ExtResource("1_pause_menu")
 
 [node name="Background" type="ColorRect" parent="."]
@@ -44,6 +45,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 color = Color(0, 0, 0, 0.5)
 
 [node name="PausePanel" type="Panel" parent="."]
@@ -54,9 +56,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = -180.0
+offset_top = -150.0
 offset_right = 200.0
-offset_bottom = 180.0
+offset_bottom = 150.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
@@ -72,7 +74,7 @@ offset_right = -20.0
 offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 30
 
 [node name="PausedLabel" type="Label" parent="PausePanel/MenuContainer"]
 layout_mode = 2
@@ -87,33 +89,19 @@ vertical_alignment = 1
 
 [node name="ResumeButton" type="Button" parent="PausePanel/MenuContainer"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 80)
 text = "RESUME"
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-
-[node name="RestartButton" type="Button" parent="PausePanel/MenuContainer"]
-layout_mode = 2
-text = "RESTART"
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-
-[node name="MainMenuButton" type="Button" parent="PausePanel/MenuContainer"]
-layout_mode = 2
-text = "MAIN MENU"
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 
 [node name="QuitButton" type="Button" parent="PausePanel/MenuContainer"]
 layout_mode = 2
-text = "QUIT GAME"
+custom_minimum_size = Vector2(0, 80)
+text = "QUIT"
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 
 [connection signal="pressed" from="PausePanel/MenuContainer/ResumeButton" to="." method="_on_resume_button_pressed"]
-[connection signal="pressed" from="PausePanel/MenuContainer/RestartButton" to="." method="_on_restart_button_pressed"]
-[connection signal="pressed" from="PausePanel/MenuContainer/MainMenuButton" to="." method="_on_main_menu_button_pressed"]
 [connection signal="pressed" from="PausePanel/MenuContainer/QuitButton" to="." method="_on_quit_button_pressed"]

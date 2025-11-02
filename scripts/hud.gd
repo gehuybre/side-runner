@@ -22,6 +22,13 @@ signal game_over(final_score: int, time_survived: float)
 func _ready() -> void:
 	print("HUD ready! Initial score: ", total_score)
 	
+	# Enable input processing for restart functionality
+	set_process_input(true)
+	
+	# Ensure HUD can receive input properly, even on mobile
+	mouse_filter = Control.MOUSE_FILTER_PASS
+	process_mode = Node.PROCESS_MODE_ALWAYS  # Work even when paused
+	
 	# Get reference to GameManager
 	game_manager = get_node("/root/GameManager") if get_node_or_null("/root/GameManager") else null
 	if game_manager:
@@ -114,3 +121,19 @@ func reset_game() -> void:
 	
 	_update_display()
 	print("HUD reset for new game")
+
+func _input(event: InputEvent) -> void:
+	# Handle restart when game is over, but only for keyboard input
+	# Touch inputs should be handled by touch controls
+	if not game_active and game_over_overlay and game_over_overlay.visible:
+		if event is InputEventKey and (event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_select")):
+			print("Restart input detected in HUD")
+			get_tree().reload_current_scene()
+
+func _on_restart_button_pressed() -> void:
+	print("Game over restart button pressed")
+	get_tree().reload_current_scene()
+
+func _on_quit_button_pressed() -> void:
+	print("Game over quit button pressed - returning to main menu")
+	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")

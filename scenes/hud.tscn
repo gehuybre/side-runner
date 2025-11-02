@@ -35,13 +35,53 @@ shadow_size = 3
 shadow_color = Color(0, 0, 0, 0.8)
 shadow_offset = Vector2(3, 3)
 
-[sub_resource type="LabelSettings" id="LabelSettings_time"]
-font = ExtResource("2_font")
-font_size = 24
-font_color = Color(0.3, 0.8, 1, 1)
-outline_size = 2
-outline_color = Color(0, 0.2, 0.4, 1)
-shadow_color = Color(0, 0, 0, 0.6)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.2, 0.6, 0.9, 0.9)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_hover"]
+bg_color = Color(0.3, 0.7, 1.0, 1.0)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_quit_button"]
+bg_color = Color(0.8, 0.3, 0.3, 0.9)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_quit_button_hover"]
+bg_color = Color(0.9, 0.4, 0.4, 1.0)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
 
 [node name="HUD" type="Control"]
 layout_mode = 3
@@ -50,7 +90,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
+mouse_filter = 1
 script = ExtResource("1_hud")
 
 [node name="TopBar" type="Panel" parent="."]
@@ -89,7 +129,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
+mouse_filter = 0
 
 [node name="GameOverBackground" type="ColorRect" parent="GameOverOverlay"]
 layout_mode = 1
@@ -98,6 +138,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 color = Color(0, 0, 0, 0.7)
 
 [node name="GameOverPanel" type="Panel" parent="GameOverOverlay"]
@@ -108,9 +149,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -300.0
-offset_top = -150.0
+offset_top = -250.0
 offset_right = 300.0
-offset_bottom = 150.0
+offset_bottom = 250.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_score_bg")
@@ -120,9 +161,13 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 30.0
+offset_top = 30.0
+offset_right = -30.0
+offset_bottom = -30.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 25
 
 [node name="GameOverLabel" type="Label" parent="GameOverOverlay/GameOverPanel/GameOverContainer"]
 layout_mode = 2
@@ -138,9 +183,23 @@ label_settings = SubResource("LabelSettings_score")
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="RestartLabel" type="Label" parent="GameOverOverlay/GameOverPanel/GameOverContainer"]
+[node name="RestartButton" type="Button" parent="GameOverOverlay/GameOverPanel/GameOverContainer"]
 layout_mode = 2
-text = "Press R, SPACE, or ENTER to restart"
-label_settings = SubResource("LabelSettings_time")
-horizontal_alignment = 1
-vertical_alignment = 1
+custom_minimum_size = Vector2(0, 100)
+text = "RESTART"
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+
+[node name="QuitButton" type="Button" parent="GameOverOverlay/GameOverPanel/GameOverContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 100)
+text = "QUIT"
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxFlat_quit_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_quit_button_hover")
+
+[connection signal="pressed" from="GameOverOverlay/GameOverPanel/GameOverContainer/RestartButton" to="." method="_on_restart_button_pressed"]
+[connection signal="pressed" from="GameOverOverlay/GameOverPanel/GameOverContainer/QuitButton" to="." method="_on_quit_button_pressed"]

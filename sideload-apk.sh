@@ -2,6 +2,16 @@
 
 # Side Runner APK Sideloader Script
 # This script installs the Side Runner APK to a connected Android device via USB
+#
+# Features:
+# - Auto-delete: Automatically uninstalls existing app version
+# - Auto-start: Automatically launches the app after installation
+# - Auto-debug: Automatically starts live log monitoring for touch controls
+#
+# Configure behavior by changing these variables:
+# - AUTO_DELETE=true/false
+# - AUTO_START=true/false  
+# - AUTO_DEBUG=true/false
 
 set -e  # Exit on any error
 
@@ -12,10 +22,21 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Configuration
-APK_NAME="side-runner-gradle.apk"
-APK_PATH="$(pwd)/$APK_NAME"
-PACKAGE_NAME="com.example.siderunner"  # Adjust if different
+# Configuration - Load from config file if it exists
+CONFIG_FILE="sideload-config.conf"
+if [ -f "$CONFIG_FILE" ]; then
+    echo -e "${BLUE}Loading configuration from $CONFIG_FILE...${NC}"
+    source "$CONFIG_FILE"
+else
+    # Default configuration
+    APK_NAME="side-runner-final-mobile.apk"
+    PACKAGE_NAME="com.example.siderunner"
+    AUTO_DELETE=true
+    AUTO_START=true
+    AUTO_DEBUG=true
+fi
+
+APK_PATH="/tmp/$APK_NAME"
 
 echo -e "${BLUE}=== Side Runner APK Sideloader ===${NC}"
 echo ""
@@ -70,15 +91,24 @@ fi
 echo -e "${GREEN}✓ Found $DEVICE_COUNT connected device(s)${NC}"
 echo ""
 
-# Check if app is already installed and offer to uninstall
+# Check if app is already installed and auto-uninstall if configured
 echo -e "${BLUE}Checking if app is already installed...${NC}"
 if adb shell pm list packages | grep -q "$PACKAGE_NAME"; then
     echo -e "${YELLOW}App is already installed${NC}"
-    read -p "Do you want to uninstall the existing version first? (y/N): " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${BLUE}Uninstalling existing app...${NC}"
-        adb uninstall "$PACKAGE_NAME" || echo -e "${YELLOW}Uninstall failed, continuing anyway...${NC}"
+    if [ "$AUTO_DELETE" = true ]; then
+        echo -e "${BLUE}Auto-uninstalling existing app...${NC}"
+        if adb uninstall "$PACKAGE_NAME"; then
+            echo -e "${GREEN}✓ Successfully uninstalled existing version${NC}"
+        else
+            echo -e "${YELLOW}⚠ Uninstall failed, continuing anyway...${NC}"
+        fi
+    else
+        read -p "Do you want to uninstall the existing version first? (y/N): " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo -e "${BLUE}Uninstalling existing app...${NC}"
+            adb uninstall "$PACKAGE_NAME" || echo -e "${YELLOW}Uninstall failed, continuing anyway...${NC}"
+        fi
     fi
 else
     echo -e "${GREEN}✓ App not currently installed${NC}"
@@ -101,12 +131,76 @@ if adb install "$APK_PATH"; then
     echo ""
     echo -e "${GREEN}You can now find 'Side Runner' in your device's app drawer${NC}"
     
-    # Offer to launch the app
-    read -p "Do you want to launch the app now? (y/N): " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${BLUE}Launching Side Runner...${NC}"
+    # Auto-launch the app if configured
+    if [ "$AUTO_START" = true ]; then
+        echo -e "${BLUE}Auto-launching Side Runner...${NC}"
         adb shell monkey -p "$PACKAGE_NAME" 1
+        
+        # Wait a moment for app to start
+        sleep 3
+        echo -e "${GREEN}✓ App launched${NC}"
+        
+        # Auto-start debug monitoring if configured
+        if [ "$AUTO_DEBUG" = true ]; then
+            echo ""
+            echo -e "${YELLOW}=== AUTO DEBUG MONITORING ===${NC}"
+            echo "Monitoring touch controls, mobile manager, and game events..."
+            echo "Press Ctrl+C to stop monitoring"
+            echo ""
+            
+            # Clear logcat buffer first to see only new logs
+            adb logcat -c
+            
+            # Start monitoring with better filtering
+            adb logcat -v time | grep -E "(TouchControls|MobileManager|godot.*Touch|godot.*Lane|godot.*Game|godot.*Pause|godot.*HUD|side-runner)" --line-buffered | while IFS= read -r line; do
+                # Color-code important messages
+                if echo "$line" | grep -q "TouchControls"; then
+                    echo -e "${BLUE}$line${NC}"
+                elif echo "$line" | grep -q "MobileManager"; then
+                    echo -e "${GREEN}$line${NC}"
+                elif echo "$line" | grep -q "Touch.*triggered"; then
+                    echo -e "${YELLOW}$line${NC}"
+                elif echo "$line" | grep -q "Game.*over\|Pause\|Resume"; then
+                    echo -e "${RED}$line${NC}"
+                else
+                    echo "$line"
+                fi
+            done
+        else
+            echo ""
+            echo -e "${YELLOW}=== DEBUG INFO ===${NC}"
+            echo "Monitor logs manually with:"
+            echo "  adb logcat | grep -E '(TouchControls|MobileManager|godot)'"
+        fi
+    else
+        # Offer to launch the app manually
+        read -p "Do you want to launch the app now? (y/N): " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo -e "${BLUE}Launching Side Runner...${NC}"
+            adb shell monkey -p "$PACKAGE_NAME" 1
+            
+            # Wait a moment for app to start
+            sleep 2
+            
+            echo ""
+            echo -e "${YELLOW}=== DEBUG INFO ===${NC}"
+            echo "If touch controls aren't working, you can monitor logs with:"
+            echo "  adb logcat | grep -E '(TouchControls|MobileManager|godot)'"
+            echo ""
+            echo "Press Ctrl+C to stop log monitoring when you start it."
+            echo ""
+            
+            read -p "Do you want to start live log monitoring now? (y/N): " -n 1 -r
+            echo ""
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "${BLUE}Starting live log monitoring...${NC}"
+                echo "Watch for TouchControls and MobileManager messages"
+                echo "Press Ctrl+C to stop monitoring"
+                echo ""
+                adb logcat | grep -E "(TouchControls|MobileManager|godot|side-runner)"
+            fi
+        fi
     fi
 else
     echo ""

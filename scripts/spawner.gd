@@ -73,6 +73,12 @@ func _ready() -> void:
 		# Get lanes directly if player already calculated them
 		if player.has_method("get") and "lanes" in player:
 			_on_lanes_updated(player.lanes)
+	
+	# Connect to touch controls for restart functionality
+	var touch_controls = get_parent().get_node_or_null("CanvasLayer/TouchControls")
+	if touch_controls and touch_controls.has_signal("restart_pressed"):
+		touch_controls.connect("restart_pressed", Callable(self, "_on_touch_restart"))
+		print("Connected to touch controls restart signal")
 
 func _on_lanes_updated(new_lanes: Array[float]) -> void:
 	lanes_y = PackedFloat32Array(new_lanes)
@@ -350,6 +356,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _game_active and event is InputEventKey and event.pressed:
 		if event.keycode == KEY_R or event.keycode == KEY_SPACE or event.keycode == KEY_ENTER:
 			_restart_game()
+
+func _on_touch_restart() -> void:
+	if not _game_active:
+		print("Touch restart detected")
+		_restart_game()
 
 func _restart_game() -> void:
 	print("Restarting game...")

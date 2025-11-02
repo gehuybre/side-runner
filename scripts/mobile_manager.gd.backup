@@ -4,7 +4,7 @@ extends Node
 signal mobile_settings_changed
 
 @export var auto_detect_mobile: bool = true
-@export var force_mobile_mode: bool = true
+@export var force_mobile_mode: bool = false
 @export var touch_controls_opacity: float = 0.4
 @export var haptic_feedback: bool = true
 
