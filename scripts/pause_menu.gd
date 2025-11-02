@@ -2,6 +2,7 @@
 extends Control
 
 var is_paused: bool = false
+var touch_controls: Control = null
 
 signal resume_game
 signal restart_game
@@ -16,6 +17,26 @@ func _ready() -> void:
 	# Make sure the pause menu can receive input even when hidden
 	set_process_input(true)
 	hide()
+	
+	# Connect to touch controls if available
+	_connect_touch_controls()
+
+func _connect_touch_controls() -> void:
+	# Look for touch controls in the scene tree
+	var world = get_parent().get_parent()  # CanvasLayer -> World
+	if world:
+		touch_controls = world.get_node_or_null("CanvasLayer/TouchControls")
+		if not touch_controls:
+			# Try alternative paths
+			touch_controls = world.get_node_or_null("UI/TouchControls")
+			if not touch_controls:
+				touch_controls = world.get_node_or_null("TouchControls")
+		
+		if touch_controls:
+			touch_controls.pause_pressed.connect(_on_touch_pause)
+			print("Pause menu connected to touch controls")
+		else:
+			print("No touch controls found for pause menu")
 
 func _input(event: InputEvent) -> void:
 	# Debug: Log all key events
@@ -31,6 +52,14 @@ func _input(event: InputEvent) -> void:
 			_pause_game()
 		# Accept the event to prevent it from being handled elsewhere
 		get_viewport().set_input_as_handled()
+
+# Touch input handler
+func _on_touch_pause() -> void:
+	print("Touch pause detected")
+	if is_paused:
+		_resume_game()
+	else:
+		_pause_game()
 
 func _pause_game() -> void:
 	is_paused = true

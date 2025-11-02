@@ -1,0 +1,91 @@
+# MobileManager.gd
+extends Node
+
+signal mobile_settings_changed
+
+@export var auto_detect_mobile: bool = true
+@export var force_mobile_mode: bool = false
+@export var touch_controls_opacity: float = 0.4
+@export var haptic_feedback: bool = true
+
+var is_mobile_platform: bool = false
+var touch_controls: Control = null
+
+func _ready() -> void:
+	# Detect mobile platform
+	_detect_platform()
+	
+	# Connect to scene tree changes to find touch controls
+	get_tree().node_added.connect(_on_node_added)
+	
+	print("MobileManager initialized - Mobile platform: ", is_mobile_platform)
+
+func _detect_platform() -> void:
+	var platform_name = OS.get_name()
+	is_mobile_platform = platform_name in ["Android", "iOS"]
+	
+	if force_mobile_mode:
+		is_mobile_platform = true
+		print("Mobile mode forced on")
+	
+	if auto_detect_mobile:
+		print("Auto-detected platform: ", platform_name, " - Mobile: ", is_mobile_platform)
+
+func _on_node_added(node: Node) -> void:
+	# Auto-configure touch controls when they're added to the scene
+	if node.name == "TouchControls" and node.has_method("set_opacity"):
+		touch_controls = node
+		_configure_touch_controls()
+
+func _configure_touch_controls() -> void:
+	if not touch_controls:
+		return
+	
+	# Set visibility based on mobile platform
+	if is_mobile_platform or force_mobile_mode:
+		touch_controls.show_controls()
+		touch_controls.set_opacity(touch_controls_opacity)
+		print("Touch controls configured for mobile")
+	else:
+		touch_controls.hide_controls()
+		print("Touch controls hidden for desktop")
+
+func enable_mobile_mode() -> void:
+	force_mobile_mode = true
+	is_mobile_platform = true
+	if touch_controls:
+		_configure_touch_controls()
+	mobile_settings_changed.emit()
+
+func disable_mobile_mode() -> void:
+	force_mobile_mode = false
+	_detect_platform()
+	if touch_controls:
+		_configure_touch_controls()
+	mobile_settings_changed.emit()
+
+func set_touch_opacity(opacity: float) -> void:
+	touch_controls_opacity = clamp(opacity, 0.1, 1.0)
+	if touch_controls:
+		touch_controls.set_opacity(touch_controls_opacity)
+
+func toggle_haptic_feedback() -> void:
+	haptic_feedback = !haptic_feedback
+	print("Haptic feedback: ", haptic_feedback)
+
+func trigger_haptic_light() -> void:
+	if haptic_feedback and is_mobile_platform:
+		# Trigger light haptic feedback
+		Input.vibrate_handheld(50)  # 50ms light vibration
+
+func trigger_haptic_medium() -> void:
+	if haptic_feedback and is_mobile_platform:
+		# Trigger medium haptic feedback
+		Input.vibrate_handheld(100)  # 100ms medium vibration
+
+# Public getters
+func is_mobile() -> bool:
+	return is_mobile_platform
+
+func get_touch_controls() -> Control:
+	return touch_controls

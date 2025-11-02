@@ -9,6 +9,7 @@ var lanes: Array[float] = []
 var lane_index: int = 1
 var _lane_tween: Tween = null
 var is_dead: bool = false
+var touch_controls: Control = null
 
 signal player_died
 signal lanes_updated(new_lanes: Array[float])
@@ -21,6 +22,27 @@ func _ready() -> void:
 	
 	# Emit signal so spawner can sync lanes
 	lanes_updated.emit(lanes)
+	
+	# Connect to touch controls if they exist
+	_connect_touch_controls()
+
+func _connect_touch_controls() -> void:
+	# Look for touch controls in the scene tree
+	var world = get_parent()
+	if world:
+		touch_controls = world.get_node_or_null("CanvasLayer/TouchControls")
+		if not touch_controls:
+			# Try alternative paths
+			touch_controls = world.get_node_or_null("UI/TouchControls")
+			if not touch_controls:
+				touch_controls = world.get_node_or_null("TouchControls")
+		
+		if touch_controls:
+			touch_controls.lane_up_pressed.connect(_on_touch_lane_up)
+			touch_controls.lane_down_pressed.connect(_on_touch_lane_down)
+			print("Player connected to touch controls")
+		else:
+			print("No touch controls found in scene")
 
 func _calculate_lanes() -> void:
 	if custom_lanes_y.size() == 3:
@@ -46,6 +68,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("lane_up"):
 		_change_lane(-1)
 	elif event.is_action_pressed("lane_down"):
+		_change_lane(1)
+
+# Touch input handlers
+func _on_touch_lane_up() -> void:
+	if not is_dead:
+		_change_lane(-1)
+
+func _on_touch_lane_down() -> void:
+	if not is_dead:
 		_change_lane(1)
 
 func _change_lane(dir: int) -> void:
