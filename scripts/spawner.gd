@@ -260,7 +260,7 @@ func _on_player_died() -> void:
 	# Show restart instruction
 	get_tree().paused = false  # Ensure we can still process input
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if not _game_active and event is InputEventKey and event.pressed:
 		if event.keycode == KEY_R or event.keycode == KEY_SPACE or event.keycode == KEY_ENTER:
 			_restart_game()
@@ -284,7 +284,7 @@ func _restart_game() -> void:
 	_recent_spawns.clear()
 	
 	# Reset HUD before reloading scene
-	var hud = get_parent().get_node("HUD")
+	var hud = get_parent().get_node("CanvasLayer/HUD")
 	if hud and hud.has_method("reset_game"):
 		hud.reset_game()
 		print("HUD reset for new game")

@@ -3,7 +3,7 @@ extends Camera2D
 
 @export var camera_offset_x_ratio: float = -0.1  # 10% left of center
 @export var zoom_level: float = 1.5  # Increased zoom to fill screen better
-@export var follow_player: bool = true
+@export var follow_player: bool = false  # Changed to false for fixed camera
 
 func _ready() -> void:
 	_position_camera()
@@ -22,8 +22,8 @@ func _position_camera() -> void:
 			# Fallback if no player found
 			position = Vector2(viewport_size.x * camera_offset_x_ratio, viewport_size.y * 0.5)
 	else:
-		# Fixed camera position
-		var center_x = viewport_size.x * camera_offset_x_ratio
+		# Fixed camera position - center it properly for endless runner
+		var center_x = 0.0  # Center the camera at origin
 		var center_y = viewport_size.y * 0.5
 		position = Vector2(center_x, center_y)
 	
